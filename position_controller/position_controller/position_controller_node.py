@@ -21,13 +21,13 @@ class PositionControllerNode(Node):
         self.declare_parameter('speed_tolerance', 1.5)  # m/s - tolerancja prędkości (1 km/h)
         
         # Parametry PID - domyślne (będą nadpisywane przez parametry dla półbiegów)
-        self.declare_parameter('Kp', 0.6)  # wzmocnienie proporcjonalne
+        self.declare_parameter('Kp', 0.35)  # wzmocnienie proporcjonalne
         self.declare_parameter('Ki', 0.0)  # wzmocnienie całkujące
         self.declare_parameter('Kd', 0.0)  # wzmocnienie różniczkujące
         
         # Parametry PID dla poszczególnych półbiegów
         self.declare_parameter('gear1_Kp', 0.34)  # Półbieg 1 - wolny, stabilny
-        self.declare_parameter('gear1_Ki', 0.00)
+        self.declare_parameter('gear1_Ki', 0.0)
         self.declare_parameter('gear1_Kd', 0.0)
         
         self.declare_parameter('gear2_Kp', 0.37)  # Półbieg 2 - średni
@@ -42,16 +42,16 @@ class PositionControllerNode(Node):
         self.declare_parameter('gear4_Ki', 0.0)
         self.declare_parameter('gear4_Kd', 0.0)
         
-        # Parametry max_speed dla każdego półbiegu w km/h (na podstawie Gear Manager z marginesem bezpieczeństwa)
-        self.declare_parameter('gear1_max_speed_kmh', 7.5)   # km/h (org: 8.4 km/h)
-        self.declare_parameter('gear2_max_speed_kmh', 8.7)  # km/h (org: 13.0 km/h)
-        self.declare_parameter('gear3_max_speed_kmh', 10.2)  # km/h (org: 16.8 km/h)
-        self.declare_parameter('gear4_max_speed_kmh', 11.9)  # km/h (org: 25.2 km/h)
-        #         # Parametry max_speed dla każdego półbiegu w km/h (na podstawie Gear Manager z marginesem bezpieczeństwa)
-        # self.declare_parameter('gear1_max_speed_kmh', 11.5)   # km/h (org: 8.4 km/h)
-        # self.declare_parameter('gear2_max_speed_kmh', 13.5)  # km/h (org: 13.0 km/h)
-        # self.declare_parameter('gear3_max_speed_kmh', 16.0)  # km/h (org: 16.8 km/h)
-        # self.declare_parameter('gear4_max_speed_kmh', 18.6)  # km/h (org: 25.2 km/h)
+        # Parametry max_speed dla każdego półbiegu w km/h 
+        self.declare_parameter('gear1_max_speed_kmh', 7.5)   # km/h 
+        self.declare_parameter('gear2_max_speed_kmh', 8.7)  # km/h 
+        self.declare_parameter('gear3_max_speed_kmh', 10.2)  # km/h 
+        self.declare_parameter('gear4_max_speed_kmh', 11.9)  # km/h
+        # Parametry max_speed dla każdego półbiegu w km/h
+        # self.declare_parameter('gear1_max_speed_kmh', 11.5)   # km/h 
+        # self.declare_parameter('gear2_max_speed_kmh', 13.5)  # km/h 
+        # self.declare_parameter('gear3_max_speed_kmh', 16.0)  # km/h 
+        # self.declare_parameter('gear4_max_speed_kmh', 18.6)  # km/h 
         
         self.declare_parameter('min_speed', 0.5)  # m/s - minimalna prędkość
         self.declare_parameter('max_speed', 8.0)  # m/s - maksymalna prędkość (domyślna, nadpisywana przez gear_max_speeds)
@@ -162,14 +162,12 @@ class PositionControllerNode(Node):
             self.set_enabled_callback
         )
         
-        # NOWY SERWIS: Do ręcznego ustawiania parametrów
         self.set_parameters_service = self.create_service(
             SetParameters, 
             'position_controller_node/set_parameters', 
             self.set_parameters_service_callback
         )
         
-        # NOWOŚĆ: Callback do dynamicznej zmiany parametrów
         self.add_on_set_parameters_callback(self.parameters_callback)
         
         # --- Timery ---
@@ -202,12 +200,11 @@ class PositionControllerNode(Node):
         """Inicjalizuje parametry max_speed dla każdego półbiegu."""
         self.gear_max_speeds = {}  # Przechowuje wartości w m/s
         
-        for gear in range(1, 5):  # Półbiegi 1-4
+        for gear in range(1, 5):
             # Pobierz wartość w km/h i konwertuj na m/s
             speed_kmh = self.get_parameter(f'gear{gear}_max_speed_kmh').get_parameter_value().double_value
             self.gear_max_speeds[gear] = speed_kmh / 3.6  # Konwersja km/h -> m/s
         
-        # Ustaw aktualny max_speed na podstawie aktualnego biegu (domyślnie bieg 1)
         if self.current_gear in self.gear_max_speeds:
             self.max_speed = self.gear_max_speeds[self.current_gear]
         
@@ -238,13 +235,11 @@ class PositionControllerNode(Node):
             old_max = self.max_speed
             self.max_speed = self.gear_max_speeds[self.current_gear]
             
-            if abs(old_max - self.max_speed) > 0.01:  # Tylko jeśli zmiana jest znacząca
-                self.get_logger().info(
-                    f"Zmiana max_speed dla półbiegu {self.current_gear}: "
-                    f"{old_max:.2f} → {self.max_speed:.2f} m/s ({old_max*3.6:.1f} → {self.max_speed*3.6:.1f} km/h)"
-                )
-                # Reset integratora przy zmianie limitów prędkości
-                self.integral_error = 0.0
+            self.get_logger().info(
+                f"Zmiana max_speed dla półbiegu {self.current_gear}: "
+                f"{old_max:.2f} → {self.max_speed:.2f} m/s ({old_max*3.6:.1f} → {self.max_speed*3.6:.1f} km/h)"
+            )
+
         else:
             self.get_logger().warn(f"Brak parametrów max_speed dla półbiegu {self.current_gear}, używam domyślnych")
 
@@ -266,9 +261,7 @@ class PositionControllerNode(Node):
             self.get_logger().debug(f"Półbieg: {self.current_gear}, Sprzęgło: {'wciśnięte' if self.clutch_pressed else 'zwolnione'}")
 
     def update_parameter_and_variable(self, param_name, value, variable_name):
-        """Aktualizuje zmienną wewnętrzną."""
         try:
-            # Aktualizuj zmienną wewnętrzną
             setattr(self, variable_name, value)
             self.get_logger().info(f"Zaktualizowano {param_name} na: {value}")
             return True
@@ -277,7 +270,6 @@ class PositionControllerNode(Node):
             return False
 
     def parameters_callback(self, params):
-        """Ten callback jest automatycznie wywoływany, gdy ktoś zmieni parametry węzła."""
         self.get_logger().info("=== OTRZYMANO ZMIANĘ PARAMETRÓW ===")
         
         for param in params:
@@ -496,15 +488,11 @@ class PositionControllerNode(Node):
         
         if self.is_enabled:
             self.get_logger().info("Autopilot WŁĄCZONY")
-            # Reset integratora przy włączeniu
             self.integral_error = 0.0
-            # Reset flagi warunków aktywacji - będą sprawdzone przy pierwszym uruchomieniu
             self.activation_conditions_checked = False
         else:
             self.get_logger().info("Autopilot WYŁĄCZONY")
-            # Reset integratora przy wyłączeniu
             self.integral_error = 0.0
-            # Reset flagi warunków aktywacji
             self.activation_conditions_checked = False
         
         response.success = True
@@ -562,7 +550,7 @@ class PositionControllerNode(Node):
             'derivative_error': derivative_error if dt > 0 else 0.0
         }
 
-    def apply_anti_windup(self, target_speed, actual_speed, dt):
+    def apply_anti_windup(self, target_speed, dt):
         """Stosuje mechanizm anti-windup."""
         # Sprawdź czy sygnał sterujący jest nasycony
         if target_speed >= self.max_speed:
@@ -597,78 +585,35 @@ class PositionControllerNode(Node):
         
         return target_speed
 
-    def calculate_feedforward(self):
-        """Oblicza kompensację prędkości sieczkarni (feed-forward)."""
-        return self.harvester_speed
-
     def control_loop(self):
         """Główna pętla regulacji pozycji."""
         if not self.is_enabled:
             return
         
-        # Sprawdź warunki aktywacji tylko przy pierwszym uruchomieniu
+        # Sprawdź warunki aktywacji
         if not self.activation_conditions_checked:
             conditions_ok, condition_msg = self.check_activation_conditions()
             if not conditions_ok:
                 self.get_logger().warn(f"Autopilot nieaktywny: {condition_msg}")
-                self.publish_status("NIEAKTYWNY", condition_msg)
                 return
             else:
                 self.get_logger().info(f"Warunki aktywacji spełnione: {condition_msg}")
                 self.activation_conditions_checked = True
-                # Log nastaw regulatora przy aktywacji
-                self.get_logger().info(
-                    f"NASTAWY REGULATORA POZYCJI: "
-                    f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, Kd={self.Kd:.3f}, "
-                    f"Półbieg={self.current_gear}, "
-                    f"Tolerancja pozycji={self.position_tolerance:.2f}m, "
-                    f"Tolerancja prędkości={self.speed_tolerance:.2f}m/s, "
-                    f"Min prędkość={self.min_speed:.2f}m/s, "
-                    f"Max prędkość={self.max_speed:.2f}m/s"
-                )
         
         # Oblicz błąd pozycji
         position_error = self.target_distance - self.current_distance_longitudinal
-        
-        # Oblicz dt dla regulatora PID
-        current_time = time.time()
-        dt = current_time - self.last_control_time
-        if dt <= 0:
-            dt = 1.0 / self.control_frequency  # Fallback
-        
-        # Oblicz sygnał sterujący PID
-        pid_result = self.calculate_pid_control(position_error, dt)
-        speed_correction = pid_result['control_signal']
+        speed_correction = self.Kp * position_error
         
         # Oblicz docelową prędkość z feed-forward
-        target_speed = self.calculate_feedforward() + speed_correction
-        
-        # Zastosuj ograniczenia
+        target_speed = self.harvester_speed + speed_correction
+
         target_speed = self.apply_limits(target_speed)
-        
-        # Zastosuj anti-windup na końcowej prędkości
-        # self.apply_anti_windup(target_speed, self.tractor_speed, dt)
-        
-        # Aktualizuj czas ostatniej regulacji
-        self.last_control_time = current_time
         
         # Publikuj docelową prędkość
         speed_msg = Float64()
         speed_msg.data = target_speed
         self.target_speed_publisher.publish(speed_msg)
-        
-        # Publikuj status z szczegółowymi danymi regulacji
-        detailed_status = (
-            f"AKTYWNY: Błąd={position_error:.3f}m, "
-            f"P={pid_result['p_term']:.3f}m/s, "
-            f"I={pid_result['i_term']:.3f}m/s, "
-            f"D={pid_result['d_term']:.3f}m/s, "
-            f"Integral={pid_result['integral_error']:.3f}, "
-            f"Korekta={speed_correction:.3f}m/s, "
-            f"Cel={target_speed:.3f}m/s, "
-            f"Półbieg={self.current_gear}"
-        )
-        self.publish_status("AKTYWNY", detailed_status)
+            
         
 
     def publish_status(self, status, message):

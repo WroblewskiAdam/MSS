@@ -35,8 +35,6 @@ class DiagnosticsNode(Node):
 
         # --- QoS ---
         qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
-        
-        # NAPRAWA QoS: Specjalny QoS dla /target_speed - RELIABLE dla zgodności z position_controller
         target_speed_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
 
         # --- Publisher ---
@@ -50,12 +48,8 @@ class DiagnosticsNode(Node):
         self.create_subscription(Float64, '/target_speed', self.target_speed_callback, target_speed_qos)  # NAPRAWA: Używamy target_speed_qos
         self.create_subscription(DistanceMetrics, '/distance_metrics', self.relative_pos_callback, qos_profile)
 
-        # --- Główna pętla (Timer) ---
         self.timer = self.create_timer(1.0 / publish_frequency, self.main_loop_callback)
-        
-        # === NOWY PUBLISHER: Health reporting ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/diagnostics_node', 10)
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
         
         self.get_logger().info(f'Węzeł diagnostyczny uruchomiony. Publikuje z f={publish_frequency} Hz.')
@@ -70,7 +64,6 @@ class DiagnosticsNode(Node):
 
     def is_data_fresh(self, msg):
         if msg is None: return False
-        # Wiadomość Float64 nie ma nagłówka, więc zakładamy, że jest zawsze świeża, jeśli istnieje
         if not hasattr(msg, 'header'):
             return True
         current_time_sec = self.get_clock().now().nanoseconds / 1e9

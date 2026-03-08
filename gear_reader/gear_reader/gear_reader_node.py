@@ -2,8 +2,7 @@ import rclpy
 from rclpy.node import Node
 from my_robot_interfaces.msg import Gear
 from std_msgs.msg import String
-import lgpio  # ZMIANA: Import nowej biblioteki
-import json
+import lgpio
 import psutil
 import time
 
@@ -26,7 +25,6 @@ class GearReaderNode(Node):
             4: PIN_GEAR_4,
         }
         
-        # ZMIANA: Inicjalizacja GPIO za pomocą lgpio
         self.chip_handle = None
         self.setup_gpio()
 
@@ -40,16 +38,10 @@ class GearReaderNode(Node):
         self.get_logger().info("Węzeł gotowy. Publikuje na topiku /gears.")
 
     def setup_gpio(self):
-        """Konfiguruje piny GPIO jako wejścia z rezystorem pull-down."""
         try:
-            self.chip_handle = lgpio.gpiochip_open(4) # Otwórz chip GPIO dla RPi5
-            # Ustaw flagi dla wejścia z rezystorem pull-down
+            self.chip_handle = lgpio.gpiochip_open(4)
             flags = lgpio.SET_PULL_DOWN
-            
-            # Zarezerwuj pin sprzęgła
             lgpio.gpio_claim_input(self.chip_handle, PIN_CLUTCH, flags)
-            
-            # Zarezerwuj piny biegów
             for pin in self.gear_pins.values():
                 lgpio.gpio_claim_input(self.chip_handle, pin, flags)
                 
@@ -78,7 +70,6 @@ class GearReaderNode(Node):
             return 0
 
     def timer_callback(self):
-        """Główna pętla wywoływana przez timer."""
         msg = Gear()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.gear = self.read_gear_state()
@@ -86,7 +77,6 @@ class GearReaderNode(Node):
         self.publisher_.publish(msg)
 
     def destroy_node(self):
-        """Sprzątanie GPIO przy zamykaniu węzła."""
         if self.chip_handle is not None:
             lgpio.gpiochip_close(self.chip_handle)
             self.get_logger().info("Zasoby lgpio zostały zwolnione.")

@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import SetBool
-import lgpio  # ZMIANA: Import nowej biblioteki
+import lgpio
 import time
 import json
 import psutil
@@ -14,10 +14,8 @@ class GearShifter(Node):
         self.relay_up_pin = 25
         self.relay_down_pin = 20
 
-        # ZMIANA: Inicjalizacja GPIO za pomocą lgpio
         try:
-            self.chip_handle = lgpio.gpiochip_open(4) # Otwórz główny chip GPIO
-            # Ustaw piny jako wyjścia z początkowym stanem niskim (0)
+            self.chip_handle = lgpio.gpiochip_open(4)
             lgpio.gpio_claim_output(self.chip_handle, self.relay_up_pin, 0)
             lgpio.gpio_claim_output(self.chip_handle, self.relay_down_pin, 0)
         except lgpio.error as e:
@@ -35,8 +33,6 @@ class GearShifter(Node):
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info('Gear shifter node ready.')
-
-    # Funkcja publish_health pozostaje bez zmian
 
     def shift_up_callback(self, request, response):
         self.get_logger().info('Gear up requested.')
@@ -65,32 +61,26 @@ class GearShifter(Node):
         return response
 
     def _trigger_relay(self, pin):
-        # ZMIANA: Sposób sterowania pinami
         lgpio.gpio_write(self.chip_handle, pin, 1)  # Ustaw stan wysoki
         time.sleep(0.3)
         lgpio.gpio_write(self.chip_handle, pin, 0)  # Ustaw stan niski
 
     def destroy_node(self):
-        # ZMIANA: Prawidłowe zwolnienie zasobów lgpio
         if hasattr(self, 'chip_handle'):
             lgpio.gpiochip_close(self.chip_handle)
             self.get_logger().info("Zasoby lgpio zostały zwolnione.")
         super().destroy_node()
 
-    # Funkcja publish_health i main pozostają bez zmian
     def publish_health(self):
         """Publikuje status zdrowia węzła."""
         try:
-            # Sprawdź status GPIO
             gpio_status = "OK"
             try:
-                # Sprawdź, czy uchwyt jest nadal ważny
                 lgpio.gpio_read(self.chip_handle, self.relay_up_pin)
                 gpio_status = "OK"
             except Exception:
                 gpio_status = "ERROR"
             
-            # ... reszta funkcji bez zmian ...
             errors = []
             if gpio_status == "ERROR":
                 errors.append("Problem z GPIO")

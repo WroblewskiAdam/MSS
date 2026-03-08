@@ -29,9 +29,9 @@ class RelativeComputerNode(Node):
         self.declare_parameter('tractor_longitudinal_offset_m', 6.4)
         self.declare_parameter('chopper_longitudinal_offset_m', 0.6)
 
-        self.declare_parameter('long_filter_cutoff_hz', 1.0)  # Niska częstotliwość dla płynnej zmiany odległości
+        self.declare_parameter('long_filter_cutoff_hz', 1.0)  
         self.declare_parameter('long_filter_order', 2)
-        self.declare_parameter('sampling_frequency_hz', 20.0) # Częstotliwość parowania wiadomości (zależy od nadawców)
+        self.declare_parameter('sampling_frequency_hz', 20.0) 
 
         tractor_topic = self.get_parameter('tractor_gps_topic').get_parameter_value().string_value
         chopper_topic = self.get_parameter('chopper_gps_topic').get_parameter_value().string_value
@@ -69,9 +69,7 @@ class RelativeComputerNode(Node):
         )
         self.time_synchronizer.registerCallback(self.synchronized_callback)
 
-        # === NOWY PUBLISHER: Health reporting ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/relative_computer_node', 10)
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info("Węzeł obliczania pozycji względnej uruchomiony (tryb absolutnego kursu).")
@@ -93,12 +91,10 @@ class RelativeComputerNode(Node):
             self.get_logger().info(f"Ustawiono punkt odniesienia ENU na: Lat={chopper_msg.latitude_deg}, Lon={chopper_msg.longitude_deg}")
             return
 
-        heading_to_use_deg = chopper_msg.heading_deg
-
         tractor_pos_enu = self.latlon_to_enu(tractor_msg.latitude_deg, tractor_msg.longitude_deg)
         chopper_pos_enu = self.latlon_to_enu(chopper_msg.latitude_deg, chopper_msg.longitude_deg)
 
-        heading_rad = np.deg2rad(heading_to_use_deg)
+        heading_rad = np.deg2rad(chopper_msg.heading_deg)
         chopper_heading_vector = np.array([np.sin(heading_rad), np.cos(heading_rad)])
 
         # Oblicz wektor między antenami i koryguj tylko składową wzdłużną o offsety
@@ -122,7 +118,6 @@ class RelativeComputerNode(Node):
         metrics_msg = DistanceMetrics()
         metrics_msg.header.stamp = self.get_clock().now().to_msg()
 
-        # Rzutowanie na standardowy typ float
         metrics_msg.distance_straight = float(dist_straight)
         metrics_msg.distance_longitudinal = float(dist_longitudinal_filtered)
         metrics_msg.distance_lateral = float(dist_lateral)

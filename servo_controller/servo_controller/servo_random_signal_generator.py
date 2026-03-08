@@ -15,8 +15,8 @@ class ServoRandomJumpNode(Node):
         # === Parametry generowania losowego ===
         self.declare_parameter('min_angle', 0)
         self.declare_parameter('max_angle', 120)
-        self.declare_parameter('max_jump', 50) # Maksymalna zmiana kąta
-        self.declare_parameter('min_jump', 5) # NOWY: Minimalna zmiana kąta
+        self.declare_parameter('max_jump', 50)
+        self.declare_parameter('min_jump', 5) 
         self.declare_parameter('min_duration', 6.0) 
         self.declare_parameter('max_duration', 10.0) 
         self.declare_parameter('duration_dt', 1.0)  
@@ -26,7 +26,7 @@ class ServoRandomJumpNode(Node):
         self.min_angle = self.get_parameter('min_angle').get_parameter_value().integer_value
         self.max_angle = self.get_parameter('max_angle').get_parameter_value().integer_value
         self.max_jump = self.get_parameter('max_jump').get_parameter_value().integer_value
-        self.min_jump = self.get_parameter('min_jump').get_parameter_value().integer_value # NOWY
+        self.min_jump = self.get_parameter('min_jump').get_parameter_value().integer_value 
         self.min_duration = self.get_parameter('min_duration').get_parameter_value().double_value
         self.max_duration = self.get_parameter('max_duration').get_parameter_value().double_value
         self.duration_dt = self.get_parameter('duration_dt').get_parameter_value().double_value
@@ -45,7 +45,6 @@ class ServoRandomJumpNode(Node):
              self.get_logger().fatal("Parametr 'duration_dt' musi być dodatni. Zamykanie.")
              rclpy.shutdown()
              return
-        # NOWA WALIDACJA
         if self.min_jump < 0:
              self.get_logger().fatal("Parametr 'min_jump' nie może być ujemny. Zamykanie.")
              rclpy.shutdown()
@@ -58,11 +57,10 @@ class ServoRandomJumpNode(Node):
         self.get_logger().info("Konfiguracja generatora losowych skoków:")
         self.get_logger().info(f"  Zakres kątów:   [{self.min_angle}, {self.max_angle}]")
         self.get_logger().info(f"  Maksymalny skok: {self.max_jump}")
-        self.get_logger().info(f"  Minimalny skok:  {self.min_jump}") # NOWY
+        self.get_logger().info(f"  Minimalny skok:  {self.min_jump}")
         self.get_logger().info(f"  Zakres czasu:    [{self.min_duration}, {self.max_duration}] (krok: {self.duration_dt}s)")
 
 
-        # === Struktura (taka sama jak w ServoProfilerNode) ===
         self.publisher_ = self.create_publisher(
             StampedInt32, 'servo/set_angle', 10
         )
@@ -97,19 +95,12 @@ class ServoRandomJumpNode(Node):
         random_steps = random.randint(int(min_steps), int(max_steps))
         return random_steps * self.duration_dt
 
-    # === ZMODYFIKOWANA LOGIKA ===
     def get_next_random_angle(self, current_angle: int) -> int:
-        """Oblicza następny losowy kąt z uwzględnieniem min/max skoku i limitów kąta."""
-        
-        # 1. Oblicz bezwzględne limity skoku na podstawie limitów kąta i max_jump
-        # Najmniejszy dozwolony skok (może być ujemny)
         min_jump_allowed = max(-self.max_jump, self.min_angle - current_angle)
-        # Największy dozwolony skok
         max_jump_allowed = min(self.max_jump, self.max_angle - current_angle)
 
-        # Jeśli utknęliśmy (np. min_angle=10, max_angle=10)
         if min_jump_allowed > max_jump_allowed:
-            return current_angle # Nie da się ruszyć
+            return current_angle 
 
         # 2. Zbuduj listę "dozwolonych zakresów" z uwzględnieniem min_jump
         possible_ranges = []
@@ -131,25 +122,18 @@ class ServoRandomJumpNode(Node):
             chosen_range = random.choice(possible_ranges)
             jump = random.randint(chosen_range[0], chosen_range[1])
         else:
-            # Nie można wykonać skoku >= min_jump (np. jesteśmy przy ścianie)
-            # Fallback: wykonaj jakikolwiek dozwolony ruch (w zakresie [min_jump_allowed, max_jump_allowed])
-            #           ale unikaj skoku = 0, jeśli to możliwe
             self.get_logger().debug(f"Nie można wykonać skoku >= {self.min_jump}. Próbuję wykonać mniejszy ruch.")
             
-            # Sprawdzamy, czy w ogóle możemy się ruszyć
             if min_jump_allowed <= max_jump_allowed:
                 for _ in range(5): # Próbuj wylosować ruch różny od zera
                     jump = random.randint(min_jump_allowed, max_jump_allowed)
                     if jump != 0:
                         break
-                # Jeśli po 5 próbach nadal mamy 0, trudno, zostajemy w miejscu
-                # (lub jeśli jedyną opcją było [0, 0])
 
         return current_angle + jump
 
 
     def run_jump_sequence(self):
-        """Wątek, który zarządza sekwencją losowych skoków."""
         self.get_logger().info(f"Rozpoczynam sekwencję losowych skoków za {self.initial_delay}s...")
         time.sleep(self.initial_delay)
         
@@ -157,14 +141,10 @@ class ServoRandomJumpNode(Node):
         self.get_logger().info(f"Ustawiam pozycję startową: {current_angle} stopni.")
         
         while rclpy.ok():
-            # 1. Oblicz następny kąt docelowy
             next_angle = self.get_next_random_angle(current_angle)
             
-            # 2. Oblicz czas trwania
             duration = self.get_random_duration()
             
-            # 3. Zaktualizuj cel dla pętli publikującej
-            # Publikuj tylko jeśli jest zmiana (lub jeśli to pierwszy krok)
             if next_angle != current_angle:
                 self.get_logger().info(f"Nowy cel: {next_angle} stopni (skok: {next_angle-current_angle}, czas: {duration:.2f}s).")
                 with self.lock:
@@ -172,10 +152,8 @@ class ServoRandomJumpNode(Node):
             else:
                  self.get_logger().info(f"Brak możliwego ruchu. Pozostaję na {current_angle} stopni (na {duration:.2f}s).")
 
-            # 4. Zaczekaj
             time.sleep(duration)
             
-            # 5. Zaktualizuj stan na następną pętlę
             current_angle = next_angle
 
         self.get_logger().info("Sekwencja losowych skoków zatrzymana.")

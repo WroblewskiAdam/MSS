@@ -34,7 +34,6 @@ class SystemMonitorNode(Node):
         # Timer monitoringu
         self.monitor_timer = self.create_timer(self.monitor_interval, self.monitor_system)
         
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
         
         self.get_logger().info(f"System Monitor RPi uruchomiony. Interwał: {self.monitor_interval}s")
@@ -42,7 +41,6 @@ class SystemMonitorNode(Node):
     def get_temperature(self):
         """Pobiera temperaturę CPU RPi."""
         try:
-            # Różne sposoby na RPi
             temp_paths = [
                 '/sys/class/thermal/thermal_zone0/temp',
                 '/sys/devices/virtual/thermal/thermal_zone0/temp'
@@ -54,7 +52,6 @@ class SystemMonitorNode(Node):
                         temp_millicelsius = int(f.read().strip())
                         return temp_millicelsius / 1000.0  # Konwersja na °C
             
-            # Fallback: vcgencmd
             result = subprocess.run(['vcgencmd', 'measure_temp'], 
                                   capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
@@ -70,7 +67,6 @@ class SystemMonitorNode(Node):
     def get_gpio_status(self):
         """Sprawdza status GPIO."""
         try:
-            # Sprawdź czy GPIO jest dostępne
             if os.path.exists('/sys/class/gpio'):
                 return "OK"
             else:
@@ -81,7 +77,6 @@ class SystemMonitorNode(Node):
     def get_network_status(self):
         """Sprawdza status sieci."""
         try:
-            # Sprawdź interfejsy sieciowe
             interfaces = psutil.net_if_addrs()
             active_interfaces = []
             
@@ -103,14 +98,12 @@ class SystemMonitorNode(Node):
     def get_usb_serial_status(self):
         """Sprawdza status USB i portów szeregowych."""
         try:
-            # Sprawdź porty USB
             usb_devices = []
             if os.path.exists('/proc/bus/usb/devices'):
                 with open('/proc/bus/usb/devices', 'r') as f:
                     content = f.read()
                     usb_devices = [line for line in content.split('\n') if 'T:' in line]
             
-            # Sprawdź porty szeregowe
             serial_ports = []
             if os.path.exists('/dev'):
                 serial_ports = [f for f in os.listdir('/dev') if f.startswith('ttyUSB') or f.startswith('ttyACM')]

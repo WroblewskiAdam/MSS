@@ -15,7 +15,6 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 class MQTTChopperReceiverNode(Node):
     """
     Węzeł do odbioru danych GPS z sieczkarni przez MQTT.
-    Zastępuje komunikację Bluetooth dla większej stabilności i zasięgu.
     """
     
     def __init__(self):

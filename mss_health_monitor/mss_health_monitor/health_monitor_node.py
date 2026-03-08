@@ -30,18 +30,18 @@ class MSSHealthMonitorNode(Node):
             'gps_rtk_node',
             'bt_receiver_node',
             'gear_reader_node',
-            'gps_mockup_node',          # === NOWY: Węzeł symulacji GPS ===
-            'gear_mockup_node',         # === NOWY: Węzeł symulacji biegów ===
+            'gps_mockup_node',          
+            'gear_mockup_node',        
             'servo_controller',
             'gear_shifter',
-            'tractor_filter_node', # === NOWY: Filtr ciągnika ===
-            'chopper_filter_node', # === NOWY: Filtr sieczkarni ===
+            'tractor_filter_node', 
+            'chopper_filter_node', 
             'speed_controller_node',
             'relative_computer_node',
             'gear_manager_node',
             'diagnostics_node',
-            'system_monitor',           # === NAPRAWA: Usuwam _node ===
-            'mss_health_monitor_node'       # === NAPRAWA: Usuwam _node ===
+            'system_monitor',           
+            'mss_health_monitor_node'       
         ]
         
         # Stan węzłów
@@ -61,15 +61,12 @@ class MSSHealthMonitorNode(Node):
         self.node_status_pub = self.create_publisher(String, '/mss/node_status', qos_profile)
         self.health_alerts_pub = self.create_publisher(String, '/mss/health_alerts', qos_profile)
         
-        # === NOWY PUBLISHER: Health reporting dla samego siebie ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/mss_health_monitor_node', qos_profile)
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
         
         # Subskrypcje na health status węzłów
         for node_name in self.monitored_nodes:
             topic_name = f'/mss/node_health/{node_name}'
-            # === NAPRAWA: Używam zwykłej funkcji zamiast lambda ===
             if node_name == 'gps_rtk_node':
                 self.create_subscription(String, topic_name, self.gps_rtk_health_callback, qos_profile)
             elif node_name == 'bt_receiver_node':
@@ -134,7 +131,6 @@ class MSSHealthMonitorNode(Node):
             self.get_logger().error(f"Nieprawidłowy format JSON od węzła {node_name}")
             self.node_states[node_name] = 'ERROR'
 
-    # === NOWE FUNKCJE CALLBACK DLA KAŻDEGO WĘZŁA ===
     
     def gps_rtk_health_callback(self, msg):
         self.node_health_callback(msg, 'gps_rtk_node')

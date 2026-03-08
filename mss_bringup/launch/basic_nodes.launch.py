@@ -5,7 +5,7 @@ def generate_launch_description():
     """Uruchamia podstawowe węzły MSS bez health monitor."""
     return LaunchDescription([
         
-        # === Węzły sensorów i komunikacji (najważniejsze) ===
+        # === Węzły sensorów i komunikacji ===
         Node(
             package='gps_rtk_reader',
             executable='gps_rtk_node',

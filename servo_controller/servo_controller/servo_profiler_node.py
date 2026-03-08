@@ -10,7 +10,7 @@ class ServoProfilerNode(Node):
     def __init__(self):
         super().__init__('servo_profiler_node')
 
-        # Parametry profilowania (bez zmian)
+        # Parametry profilowania
         self.declare_parameter('start_angle', 0)
         self.declare_parameter('end_angle', 150)
         self.declare_parameter('angle_step', 5)
@@ -27,15 +27,12 @@ class ServoProfilerNode(Node):
             StampedInt32, 'servo/set_angle', 10
         )
 
-        # === NOWA LOGIKA ===
-        # Zmienna przechowująca aktualny kąt docelowy sekwencji
+        
         self.target_angle = 0
         self.lock = threading.Lock()
 
-        # Timer do ciągłej publikacji zadanego kąta z f=50 Hz
         timer_period = 1.0 / 50.0  # 50 Hz
         self.publish_timer = self.create_timer(timer_period, self.publish_callback)
-        # =================
 
         self.get_logger().info("Węzeł profilera serwa uruchomiony z publikacją 50Hz.")
         
@@ -44,7 +41,6 @@ class ServoProfilerNode(Node):
         self.profiling_thread.start()
 
     def publish_callback(self):
-        """Ta funkcja jest wywoływana 50 razy na sekundę przez timer."""
         msg = StampedInt32()
         msg.header.stamp = self.get_clock().now().to_msg()
         with self.lock:
@@ -52,26 +48,20 @@ class ServoProfilerNode(Node):
         self.publisher_.publish(msg)
 
     def run_profiling_sequence(self):
-        """Wątek, który zarządza sekwencją, zmieniając kąt docelowy."""
         self.get_logger().info(f"Rozpoczynam sekwencję profilowania od {self.start_angle} do {self.end_angle} stopni...")
         time.sleep(self.initial_delay)
         
-        # Pętla iteruje przez kolejne kroki sekwencji
         current_angle_step = self.start_angle
         while current_angle_step <= self.end_angle and rclpy.ok():
             self.get_logger().info(f"Ustawiam kąt docelowy na: {current_angle_step} stopni (na {self.hold_duration}s).")
             
-            # Ustaw nowy kąt docelowy dla pętli publikującej
             with self.lock:
                 self.target_angle = float(current_angle_step)
             
-            # Zaczekaj, aż upłynie czas trzymania na tym kroku
             time.sleep(self.hold_duration)
             
-            # Przejdź do następnego kroku
             current_angle_step += self.angle_step
 
-        # Po zakończeniu sekwencji, po prostu zainicjuj zamknięcie ROS.
         if rclpy.ok():
             self.get_logger().info("Sekwencja profilowania zakończona. Zamykanie węzła.")
             rclpy.shutdown()

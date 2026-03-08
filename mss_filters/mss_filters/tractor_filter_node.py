@@ -27,10 +27,10 @@ class TractorFilterNode(Node):
         
         # --- Parametry filtra medianowego ---
         self.declare_parameter('median_filter_window', 5)
-        self.declare_parameter('median_filter_on_off', True)  # Parametr włączania/wyłączania filtra medianowego
+        self.declare_parameter('median_filter_on_off', False)  # Parametr włączania/wyłączania filtra medianowego
         
         # --- Parametry filtra wykrywania szpilek ---
-        self.declare_parameter('spike_filter_enabled', True)  # Włączanie/wyłączanie filtra szpilek
+        self.declare_parameter('spike_filter_enabled', False)  # Włączanie/wyłączanie filtra szpilek
         self.declare_parameter('spike_threshold_speed', 2.0)  # Próg wykrywania szpilek w prędkości (m/s)
         self.declare_parameter('spike_threshold_heading', 10.0)  # Próg wykrywania szpilek w headingu (stopnie)
         self.declare_parameter('spike_min_speed', 0.0)  # Minimalna fizycznie możliwa prędkość (m/s)

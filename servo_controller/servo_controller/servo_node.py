@@ -60,12 +60,9 @@ class ServoController(Node):
         self.target_angle = 0.0
         self.manual_mode = False  # NOWA ZMIENNA: tryb ręczny
 
-        # NOWY SERVICE: przełączanie trybu serwa
         self.set_mode_service = self.create_service(SetBool, '/servo/set_manual_mode', self.set_manual_mode_callback)
 
-        # === NOWY PUBLISHER: Health reporting ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/servo_controller', 10)
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info('Servo controller node started.')
@@ -157,7 +154,6 @@ class ServoController(Node):
 
     def watchdog_callback(self):
         """Sprawdza, czy nie upłynął czas od ostatniej wiadomości."""
-        # NOWOŚĆ: Watchdog nie działa w trybie ręcznym
         if self.manual_mode:
             return
             
@@ -168,12 +164,9 @@ class ServoController(Node):
             if self.target_angle != 0.0:
                 self.get_logger().warn(f"Watchdog timeout! Brak komendy przez >{self.watchdog_timeout:.1f}s. Ustawiam kąt na 0.")
                 self.target_angle = 0.0
-                # Resetujemy czas, aby komunikat nie pojawiał się bez przerwy
                 self.last_msg_time = current_time
 
-    # === PRZYWRÓCONY KOD ===
     def set_initial_angle(self, angle: int):
-        """Ustawia pozycję początkową serwa, omijając symulację ruchu."""
         safe_angle = float(max(0, min(180, angle)))
         self.current_simulated_angle = safe_angle
         self.target_angle = safe_angle
@@ -182,7 +175,6 @@ class ServoController(Node):
     def movement_step_callback(self):
         """Symuluje i wykonuje płynny ruch serwa do pozycji docelowej."""
         error = self.target_angle - self.current_simulated_angle
-        # Jeśli jesteśmy wystarczająco blisko celu, nic nie rób
         if abs(error) < 0.01:
             return
 
@@ -198,7 +190,6 @@ class ServoController(Node):
             step = error
             
         self.current_simulated_angle += step
-        # Wyślij komendę do fizycznego serwa
         self.kit.servo[self.servo_channel].angle = int(round(self.current_simulated_angle))
 
     def publish_position_callback(self):
@@ -207,10 +198,8 @@ class ServoController(Node):
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = int(round(self.current_simulated_angle))
         self.position_publisher.publish(msg)
-    # =========================
 
     def set_angle_for_shutdown(self, angle_degrees: int):
-        """Awaryjne ustawienie serwa na konkretny kąt podczas zamykania."""
         try:
             self.kit.servo[self.servo_channel].angle = angle_degrees
             time.sleep(0.5)
@@ -218,14 +207,12 @@ class ServoController(Node):
             print(f"Error setting servo angle to {angle_degrees} during shutdown: {e}")
 
     def destroy_node(self):
-        """Czyści zasoby przy zamykaniu."""
         if hasattr(self, 'kit'):
             self.get_logger().info("Wywołano destroy_node. Ustawiam serwo na 0 dla pewności.")
             self.set_angle_for_shutdown(0)
         super().destroy_node()
 
 def main(args=None):
-    # Funkcja main pozostaje bez zmian
     rclpy.init(args=args)
     servo_controller_node = None
     try:

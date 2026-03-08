@@ -129,7 +129,7 @@ def generate_launch_description():
                 ]
             ),
             
-            # === NOWY SYSTEM: Health Monitor (zamiast watchdog'a) ===
+            # === Health Monitor ===
             TimerAction(
                 period=10.0,  # 5 sekund delay
                 actions=[

@@ -23,12 +23,8 @@ class ServoTeleop(Node):
             qos_profile=default_qos
         )
 
-        # === ZACHOWANY TIMER ===
-        # Ta pętla jest potrzebna, aby ciągle wysyłać zadaną pozycję,
-        # co utrzymuje "przy życiu" watchdog w węźle serwa.
         timer_period = 1.0 / 50.0  # 50 Hz
         self.timer = self.create_timer(timer_period, self.publish_callback)
-        # =======================
 
         self.target_angle = 0
         self.lock = threading.Lock()
@@ -44,7 +40,6 @@ class ServoTeleop(Node):
         self.input_thread.start()
 
     def publish_callback(self):
-        """Ta funkcja jest regularnie wywoływana przez timer (50 Hz)."""
         msg = StampedInt32()
         msg.header.stamp = self.get_clock().now().to_msg()
         with self.lock:
@@ -52,16 +47,9 @@ class ServoTeleop(Node):
         self.publisher_.publish(msg)
 
     def input_loop(self):
-        """Wątek do obsługi wejścia z terminala."""
         while rclpy.ok():
             try:
                 user_input = input('Podaj nowy kąt (0-180): ')
-
-                # === USUNIĘTA LOGIKA ZAMYKANIA ===
-                # Nie ma już sprawdzania, czy user_input == 'q'.
-                # Wątek po prostu obsługuje zmianę kąta.
-                # =================================
-
                 angle = int(user_input)
                 if 0 <= angle <= 180:
                     with self.lock:
@@ -80,13 +68,10 @@ def main(args=None):
     node = None
     try:
         node = ServoTeleop()
-        # rclpy.spin() jest niezbędne do działania timera publikującego
         rclpy.spin(node)
     except KeyboardInterrupt:
-        # Standardowa, prosta obsługa Ctrl+C
         print("\n[INFO] Naciśnięto Ctrl+C. Zamykanie węzła.")
     finally:
-        # Standardowe czyszczenie
         if node:
             node.destroy_node()
         if rclpy.ok():

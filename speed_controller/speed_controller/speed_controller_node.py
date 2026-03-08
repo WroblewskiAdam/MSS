@@ -18,7 +18,6 @@ class SpeedControllerNode(Node):
         super().__init__('speed_controller_node')
 
         # --- Deklaracja parametrów ---
-        # Parametr kontrolny main_gear
         self.declare_parameter('main_gear', 1)
         
         # Podstawowe nastawy regulatora (używane gdy main_gear=2 lub jako fallback)
@@ -26,47 +25,26 @@ class SpeedControllerNode(Node):
         self.declare_parameter('ki', 40.50)
         self.declare_parameter('kd', 0.00)
         
-        # # Nastawy dla półbiegu 1 (sub_gear_1)
-        # self.declare_parameter('sub_gear_1_kp', 35.0)
-        # self.declare_parameter('sub_gear_1_ki', 70.0)
-        # self.declare_parameter('sub_gear_1_kd', 0.0)
-        
-        # # Nastawy dla półbiegu 2 (sub_gear_2)
-        # self.declare_parameter('sub_gear_2_kp', 35.0)
-        # self.declare_parameter('sub_gear_2_ki', 70.0)
-        # self.declare_parameter('sub_gear_2_kd', 0.0)
-        
-        # # Nastawy dla półbiegu 3 (sub_gear_3)
-        # self.declare_parameter('sub_gear_3_kp', 30.00)
-        # self.declare_parameter('sub_gear_3_ki', 60.00)
-        # self.declare_parameter('sub_gear_3_kd', 0.00)
-        
-        # # Nastawy dla półbiegu 4 (sub_gear_4)
-        # self.declare_parameter('sub_gear_4_kp', 30.0)
-        # self.declare_parameter('sub_gear_4_ki', 60.0)
-        # self.declare_parameter('sub_gear_4_kd', 0.00)
-
-         # Nastawy dla półbiegu 1 (sub_gear_1)
+        # Nastawy dla półbiegu 1
         self.declare_parameter('sub_gear_1_kp', 27.2)
         self.declare_parameter('sub_gear_1_ki', 81.5)
         self.declare_parameter('sub_gear_1_kd', 0.0)
         
-        # Nastawy dla półbiegu 2 (sub_gear_2)
+        # Nastawy dla półbiegu 2
         self.declare_parameter('sub_gear_2_kp', 27.25)
         self.declare_parameter('sub_gear_2_ki', 76.0)
         self.declare_parameter('sub_gear_2_kd', 0.0)
         
-        # Nastawy dla półbiegu 3 (sub_gear_3)
+        # Nastawy dla półbiegu 3
         self.declare_parameter('sub_gear_3_kp', 23.5)
         self.declare_parameter('sub_gear_3_ki', 60.25)
         self.declare_parameter('sub_gear_3_kd', 0.00)
         
-        # Nastawy dla półbiegu 4 (sub_gear_4)
+        # Nastawy dla półbiegu 4
         self.declare_parameter('sub_gear_4_kp', 28.75)
         self.declare_parameter('sub_gear_4_ki', 56.25)
         self.declare_parameter('sub_gear_4_kd', 0.00)
         
-        # Pozostałe parametry bez zmian
         self.declare_parameter('v_idle', 0.7)
         self.declare_parameter('servo_min_angle', 0)
         self.declare_parameter('servo_max_angle', 150)
@@ -82,7 +60,7 @@ class SpeedControllerNode(Node):
         self.Ki = self.get_parameter('ki').get_parameter_value().double_value
         self.Kd = self.get_parameter('kd').get_parameter_value().double_value
         
-        # Nastawy dla sub-gear (półbiegów)
+        # Nastawy dla półbiegów
         self.sub_gear_params = {
             1: {
                 'kp': self.get_parameter('sub_gear_1_kp').get_parameter_value().double_value,
@@ -123,21 +101,21 @@ class SpeedControllerNode(Node):
         self.autopilot_enabled = False
         self.current_gear = 1  # Aktualny bieg (1-4)
         
-        # --- FEEDFORWARD: Współczynniki wielomianów 3. stopnia dla inicjalizacji integratora ---
-        # Format: [a3, a2, a1, a0] dla wielomianu: angle = a3*s³ + a2*s² + a1*s + a0
+       
+        # Format: [a4, a3, a2, a1, a0] dla wielomianu: angle = a4s4 a3*s³ + a2*s² + a1*s + a0
         # Zestawy współczynników w zależności od main_gear
         self.feedforward_coefficients_by_main = {
             1: {
-                1: [10.186676212107146, -13.54134634347516, 82.42113487265581, -62.755627],
-                2: [6.955916612380406, -14.248646239342783, 78.86743745241643, -66.27996103199986],
-                3: [3.7992054666586084, -6.261805895905663, 55.41186525541788, -56.13024547701927],
-                4: [2.8861966188761903, -6.538251862577834, 48.70783078668607, -55.59988787686971]
+                1: [-13.4063, 95.5660, -213.9864, 280.3807, -132.3988],
+                2: [-7.7722, 58.9652, -139.3716, 202.7862, -110.7349],
+                3: [-1.4600, 17.0311, -49.9176, 115.1759, -88.7229],
+                4: [-3.7426, 38.5309, -132.5840, 242.0538, -166.0435]
             },
             2: {
-                1: [0.5873549785294848, 13.40037863553026, 14.653379751052785, -34.52735487782364],
-                2: [1.4600581419748402, -0.7755560817553078, 38.18436232184589, -57.7959979072928],
-                3: [3.821886722815732, -22.385212129313977, 85.72752018970289, -99.19677542430101],
-                4: [0.32581512631611265, 0.5479366362622122, 17.692958476521984, -45.46624605117514]
+                1: [-13.4063, 95.5660, -213.9864, 280.3807, -132.3988],
+                2: [-7.7722, 58.9652, -139.3716, 202.7862, -110.7349],
+                3: [-1.4600, 17.0311, -49.9176, 115.1759, -88.7229],
+                4: [-3.7426, 38.5309, -132.5840, 242.0538, -166.0435]
             }
         }
 
@@ -146,10 +124,7 @@ class SpeedControllerNode(Node):
 
         # --- QoS ---
         default_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
-        # QoS dla danych o wysokiej częstotliwości
-        high_freq_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=1)
-
-
+        
         # --- Subskrypcje ---
         self.create_subscription(Float64, '/target_speed', self.target_speed_callback, default_qos)
         self.create_subscription(GpsRtk, '/gps_rtk_data/tractor_filtered', self.current_speed_callback, default_qos)
@@ -157,21 +132,15 @@ class SpeedControllerNode(Node):
 
         # --- Publishery ---
         self.servo_command_pub = self.create_publisher(StampedInt32, '/servo/set_angle', default_qos)
-        # NOWY PUBLISHER: Do danych na wykres (20 Hz) - RELIABLE dla zgodności z loggerem
         self.state_pub = self.create_publisher(SpeedControllerState, '/speed_controller/state', default_qos)
-        # NOWY PUBLISHER: Health reporting
         self.health_pub = self.create_publisher(String, '/mss/node_health/speed_controller_node', default_qos)
 
         # --- Serwis i Timery ---
         self.controller_timer = self.create_timer(self.dt_controller, self.controller_loop)
         self.enable_service = self.create_service(SetBool, 'speed_controller/set_enabled', self.set_enabled_callback)
-        # NOWY SERWIS: Do ręcznego ustawiania parametrów
         self.set_parameters_service = self.create_service(SetParameters, 'speed_controller_node/set_parameters', self.set_parameters_service_callback)
-        # NOWOŚĆ: Callback do dynamicznej zmiany parametrów
         self.add_on_set_parameters_callback(self.parameters_callback)
-        # NOWY TIMER: Health reporting co 5 sekund
         self.health_timer = self.create_timer(5.0, self.publish_health)
-        # USUNIĘTO: Timer publikowania parametrów co 5 sekund
         
         self.get_logger().info("Węzeł regulatora prędkości PI z feedforward uruchomiony.")
         self.get_logger().info(f"PARAMETRY GEAR: main_gear={self.main_gear}")
@@ -186,9 +155,7 @@ class SpeedControllerNode(Node):
         self.log_current_feedforward_coeffs()
 
     def update_parameter_and_variable(self, param_name, value, variable_name):
-        """Aktualizuje zmienną wewnętrzną."""
         try:
-            # Aktualizuj zmienną wewnętrzną
             setattr(self, variable_name, value)
             self.get_logger().info(f"Zaktualizowano {param_name} na: {value}")
             return True
@@ -223,7 +190,6 @@ class SpeedControllerNode(Node):
             return {'kp': self.Kp, 'ki': self.Ki, 'kd': self.Kd}
 
     def parameters_callback(self, params):
-        """Ten callback jest automatycznie wywoływany, gdy ktoś zmieni parametry węzła."""
         for param in params:
             if param.name == "main_gear":
                 # Zaktualizuj main_gear i aktywny zestaw współczynników feedforward
@@ -334,18 +300,15 @@ class SpeedControllerNode(Node):
         if self.autopilot_enabled:
             self.get_logger().info("REGULATOR PRĘDKOŚCI WŁĄCZONY.")
             
-            # --- FEEDFORWARD: Inicjalizacja integratora na podstawie wielomianu 3. stopnia ---
-            # Zamiast resetować integrator na 0, ustawiamy go na wartość z charakterystyki statycznej
-            # Używamy AKTUALNEJ prędkości ciągnika (już zsynchronizowanej z sieczkarnią)
+            # FEEDFORWARD: Inicjalizacja integratora na podstawie wielomianu
             # Dzięki temu unikamy szarpnięcia przy włączaniu autopilota
-            integrator_init_value = self.calculate_integrator_initialization(self.current_speed_mps)
+            integrator_init_value = self.calc_integrator(self.current_speed_mps)
             self.integral_sum = integrator_init_value
             
             self.get_logger().info(f"Integrator zainicjalizowany wartością: {integrator_init_value:.1f}° (na podstawie aktualnej prędkości: {self.current_speed_mps:.2f}m/s)")
         else:
             self.get_logger().info("REGULATOR PRĘDKOŚCI WYŁĄCZONY.")
             self.integral_sum = 0.0  # Reset integratora przy wyłączaniu
-            self.set_servo_to_zero_and_wait()
         response.success = True
         return response
 
@@ -356,7 +319,6 @@ class SpeedControllerNode(Node):
         previous_gear = self.current_gear
         self.current_gear = msg.gear  # Aktualizuj aktualny bieg
         
-
         # Logowanie zmian półbiegu gdy main_gear=1
         if (self.main_gear == 1 and previous_gear != msg.gear and msg.gear != 0):
             current_params = self.get_current_pid_params()
@@ -366,7 +328,7 @@ class SpeedControllerNode(Node):
         gear_changed = (previous_gear != msg.gear) and (msg.gear != 0)
         if self.autopilot_enabled and gear_changed:
             old_integral_sum = self.integral_sum
-            integrator_init_value = self.calculate_integrator_initialization(self.target_speed_mps)
+            integrator_init_value = self.calc_integrator(self.target_speed_mps)
             self.get_logger().info(
                 f"REINICJALIZACJA INTEGRATORA (zmiana biegu): "
                 f"V_zadana={self.target_speed_mps:.2f}m/s, "
@@ -375,32 +337,20 @@ class SpeedControllerNode(Node):
             )
             self.integral_sum = integrator_init_value
 
-    def calculate_integrator_initialization(self, current_speed_mps):
-        """
-        Oblicza wartość inicjalizacji integratora na podstawie wielomianu 3. stopnia.
-        Używane tylko przy włączaniu autopilota aby uniknąć szarpnięcia.
-        
-        Args:
-            current_speed_mps: Aktualna prędkość ciągnika w m/s (już zsynchronizowana z sieczkarnią)
-            
-        Returns:
-            float: Wartość inicjalizacji integratora
-        """
+    def calc_integrator(self, current_speed_mps):
         if self.current_gear not in self.feedforward_coefficients:
             self.get_logger().warn(f"Brak współczynników feedforward dla biegu {self.current_gear}")
             return 0.0
         
         # Pobierz współczynniki dla aktualnego biegu
         coeffs = self.feedforward_coefficients[self.current_gear]
-        a3, a2, a1, a0 = coeffs
+        a4, a3, a2, a1, a0 = coeffs
         
-        # Oblicz wielomian 3. stopnia: angle = a3*s³ + a2*s² + a1*s + a0
-        # gdzie s to prędkość względem prędkości jałowej
         s = current_speed_mps
         
         # Oblicz wartość wielomianu
-        feedforward_angle = a3 * (s**3) + a2 * (s**2) + a1 * s + a0
-        
+        feedforward_angle = a4 * (s**4) +  a3 * (s**3) + a2 * (s**2) + a1 * s + a0
+    
         # Ogranicz do zakresu serwa
         feedforward_angle = max(self.servo_min_angle, min(self.servo_max_angle, feedforward_angle))
         
@@ -416,45 +366,40 @@ class SpeedControllerNode(Node):
                 coeffs = self.feedforward_coefficients.get(gear_num, None)
                 if coeffs is None:
                     continue
-                a3, a2, a1, a0 = coeffs
+                a4, a3, a2, a1, a0 = coeffs
                 self.get_logger().info(
-                    f"  bieg {gear_num}: a3={a3:.6f}, a2={a2:.6f}, a1={a1:.6f}, a0={a0:.6f}"
+                    f"  bieg {gear_num}:a4={a4:.6f}, a3={a3:.6f}, a2={a2:.6f}, a1={a1:.6f}, a0={a0:.6f}"
                 )
         except Exception as e:
             self.get_logger().warn(f"Nie udało się zalogować współczynników feedforward: {e}")
 
-    def controller_loop(self):
-        saturated_control_signal = 0.0
-        
+    def controller_loop(self):        
         if self.autopilot_enabled and not self.clutch_pressed:
-            # Pobierz aktualne parametry PID na podstawie main_gear i current_gear
+            # Pobierz aktualne parametry PID na podstawie i current_gear
             current_params = self.get_current_pid_params()
             current_kp = current_params['kp']
             current_ki = current_params['ki']
-            current_kd = current_params['kd']
             
-            target_speed_dev = self.target_speed_mps - self.v_idle
-            current_speed_dev = self.current_speed_mps - self.v_idle
-            error = target_speed_dev - current_speed_dev
+            error = self.target_speed_mps - self.current_speed_mps
             
             output_p = current_kp * error
-            output_i_potential_contribution = current_ki * error * self.dt_controller
+            output_i = current_ki * error * self.dt_controller
             
-            unbounded_control_signal = output_p + self.integral_sum + output_i_potential_contribution
-            if not ((unbounded_control_signal >= self.output_max and error > 0) or (unbounded_control_signal <= self.output_min and error < 0)):
-                self.integral_sum += output_i_potential_contribution
+            unbounded_u = output_p + self.integral_sum + output_i
+            if not ((unbounded_u >= self.output_max and error > 0) or (unbounded_u <= self.output_min and error < 0)):
+                self.integral_sum += output_i
 
-            final_unbounded_signal = output_p + self.integral_sum
-            saturated_control_signal = max(self.output_min, min(self.output_max, final_unbounded_signal))
+            unbounded_signal = output_p + self.integral_sum
+            control_signal = max(self.output_min, min(self.output_max, unbounded_signal))
         else:
             self.integral_sum = 0.0
-            saturated_control_signal = self.servo_min_angle
+            control_signal = self.servo_min_angle
 
         # Publikacja komendy do serwa TYLKO gdy autopilot włączony
         if self.autopilot_enabled:
             servo_msg = StampedInt32()
             servo_msg.header.stamp = self.get_clock().now().to_msg()
-            servo_msg.data = int(round(saturated_control_signal))
+            servo_msg.data = int(round(control_signal))
             self.servo_command_pub.publish(servo_msg)
 
         # Publikacja danych na wykres
@@ -462,12 +407,8 @@ class SpeedControllerNode(Node):
         state_msg.header.stamp = self.get_clock().now().to_msg()
         state_msg.setpoint_speed = float(self.target_speed_mps)
         state_msg.current_speed = float(self.current_speed_mps)
-        state_msg.control_output = float(saturated_control_signal)
+        state_msg.control_output = float(control_signal)
         self.state_pub.publish(state_msg)
-
-    def set_servo_to_zero_and_wait(self):
-        # ... (bez zmian)
-        pass
 
     def publish_health(self):
         """Publikuje status zdrowia węzła."""

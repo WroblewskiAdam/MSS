@@ -14,35 +14,27 @@ class GearManagerNode(Node):
         super().__init__('gear_manager_node')
         
         # --- Parametry ---
-        self.declare_parameter('powershift_max_speeds_kmh', [8.4, 13.0, 16.8, 25.2])  # km/h
-        # NOWE PROGI Z HISTEREZĄ - na podstawie doświadczeń użytkownika (histereza 1.5 km/h)
-        # self.declare_parameter('upshift_speeds_kmh', [10.0, 13.0, 16.0, 34.0])  # km/h - progi upshift z histerezą
-        # self.declare_parameter('downshift_speeds_kmh', [0.0, 8.5, 11.5, 14.5])  # km/h - progi downshift z histerezą
-        # self.declare_parameter('upshift_speeds_kmh', [6.8, 8.0, 9.4, 15.0])  # km/h - progi upshift z histerezą
-        # self.declare_parameter('downshift_speeds_kmh', [0.0, 5.3, 6.5, 7.9])  # km/h - progi downshift z histerezą
-        self.declare_parameter('upshift_speeds_kmh', [6.5, 7.8, 9.5, 15.0])  # km/h - progi upshift z histerezą
+        self.declare_parameter('upshift_speeds_kmh', [6.8, 7.8, 9.5, 15.0])  # km/h - progi upshift z histerezą
         self.declare_parameter('downshift_speeds_kmh', [0.0, 5.3, 6.5, 7.9])  # km/h - progi downshift z histerezą
         self.declare_parameter('shift_cooldown_sec', 4.0)
-        self.declare_parameter('max_powershift', 4)
+        self.declare_parameter('max_gear', 4)
         
         # Pobierz parametry
-        powershift_max_speeds_kmh = self.get_parameter('powershift_max_speeds_kmh').get_parameter_value().double_array_value
         upshift_speeds_kmh = self.get_parameter('upshift_speeds_kmh').get_parameter_value().double_array_value
         downshift_speeds_kmh = self.get_parameter('downshift_speeds_kmh').get_parameter_value().double_array_value
         self.shift_cooldown = self.get_parameter('shift_cooldown_sec').get_parameter_value().double_value
-        self.max_powershift = self.get_parameter('max_powershift').get_parameter_value().integer_value
+        self.max_gear = self.get_parameter('max_gear').get_parameter_value().integer_value
         
         # Konwersja km/h na m/s
-        self.powershift_max_speeds = [speed / 3.6 for speed in powershift_max_speeds_kmh]
         self.upshift_speeds = [speed / 3.6 for speed in upshift_speeds_kmh]
         self.downshift_speeds = [speed / 3.6 for speed in downshift_speeds_kmh]
         
         # --- Zmienne stanu ---
-        self.current_powershift = 0  # Aktualny półbieg (0 = nieznany)
+        self.current_gear = 0  # Aktualny półbieg (0 = nieznany)
         self.current_speed = 0.0     # Aktualna prędkość w m/s
         self.clutch_pressed = False  # Stan sprzęgła
         self.last_shift_time = self.get_clock().now()  # Czas ostatniej zmiany
-        self.powershift_initialized = False  # Czy półbieg został odczytany przy starcie
+        self.gear_initialized = False  # Czy półbieg został odczytany przy starcie
         self.is_enabled = False  # Stan włączania/wyłączania gear managera
         
         # --- Health monitoring ---
@@ -90,7 +82,6 @@ class GearManagerNode(Node):
         
         # --- Logowanie ---
         self.get_logger().info("=== GEAR MANAGER NODE STARTED ===")
-        # self.get_logger().info(f"Maksymalne prędkości półbiegów: {powershift_max_speeds_kmh} km/h")
         self.get_logger().info(f"Progi upshift (z histerezą): {upshift_speeds_kmh} km/h")
         self.get_logger().info(f"Progi downshift (z histerezą): {downshift_speeds_kmh} km/h")
         self.get_logger().info(f"Cooldown: {self.shift_cooldown}s")
@@ -103,34 +94,32 @@ class GearManagerNode(Node):
         self.get_logger().info("3→4: 16.0 km/h | 4→3: 18.0 km/h (histereza: 2.0 km/h)")
 
     def gear_callback(self, msg):
-        """Odbiera stan biegu (półbiegu) i sprzęgła."""
+        """Odbiera stan biegu i sprzęgła."""
         self.last_gear_update = time.time()
         
-        # Debug: loguj tylko zmiany biegu
-        if self.current_powershift != msg.gear:
-            self.get_logger().info(f"DEBUG: Otrzymano z /gears - gear={msg.gear}, clutch={msg.clutch_state}, current_powershift={self.current_powershift}")
+        if self.current_gear != msg.gear:
+            self.get_logger().info(f"DEBUG: Otrzymano z /gears - gear={msg.gear}, clutch={msg.clutch_state}, current_gear={self.current_gear}")
         
-        if not self.powershift_initialized and msg.gear > 0:
+        if not self.gear_initialized and msg.gear > 0:
             # Pierwszy odczyt - zainicjalizuj półbieg
-            self.current_powershift = msg.gear
-            self.powershift_initialized = True
-            self.get_logger().info(f"Zainicjalizowano półbieg: {self.current_powershift}")
-        elif self.current_powershift != msg.gear and msg.gear > 0:
+            self.current_gear = msg.gear
+            self.gear_initialized = True
+            self.get_logger().info(f"Zainicjalizowano półbieg: {self.current_gear}")
+        elif self.current_gear != msg.gear and msg.gear > 0:
             # Zmiana półbiegu
-            old_powershift = self.current_powershift
-            self.current_powershift = msg.gear
-            self.get_logger().info(f"Zmiana półbiegu: {old_powershift} -> {self.current_powershift}")
+            old_powershift = self.current_gear
+            self.current_gear = msg.gear
+            self.get_logger().info(f"Zmiana półbiegu: {old_powershift} -> {self.current_gear}")
         elif msg.gear > 0:
-            # Aktualizacja stanu biegu (bez zmiany) - ważne dla synchronizacji
-            if self.current_powershift != msg.gear:
-                self.get_logger().info(f"Synchronizacja stanu biegu: {self.current_powershift} -> {msg.gear}")
-            self.current_powershift = msg.gear
+            # Aktualizacja stanu biegu
+            if self.current_gear != msg.gear:
+                self.get_logger().info(f"Synchronizacja stanu biegu: {self.current_gear} -> {msg.gear}")
+            self.current_gear = msg.gear
         
         # Aktualizuj stan sprzęgła
         self.clutch_pressed = (msg.clutch_state == 1)
 
     def speed_callback(self, msg):
-        """Odbiera aktualną prędkość z GPS (filtrowaną)."""
         self.current_speed = msg.speed_mps
         self.last_speed_update = time.time()
 
@@ -147,11 +136,10 @@ class GearManagerNode(Node):
         request.data = True
         
         try:
-            # Wyślij żądanie bez czekania na odpowiedź
             future = client.call_async(request)
             self.get_logger().info(f"Wysłano żądanie zmiany półbiegu: {direction}")
             self.last_shift_time = self.get_clock().now()
-            return True  # Zawsze zwracaj True - stan będzie zsynchronizowany przez /gears
+            return True 
                 
         except Exception as e:
             self.get_logger().error(f"Błąd usługi {direction}: {e}")
@@ -159,7 +147,6 @@ class GearManagerNode(Node):
             return False
 
     def set_enabled_callback(self, request, response):
-        """Callback dla serwisu włączania/wyłączania gear managera."""
         self.is_enabled = request.data
         status = "włączony" if self.is_enabled else "wyłączony"
         self.get_logger().info(f"Gear manager {status}")
@@ -175,57 +162,47 @@ class GearManagerNode(Node):
             return
             
         # Sprawdź czy półbieg został zainicjalizowany
-        if not self.powershift_initialized:
+        if not self.gear_initialized:
             return
         
         # Warunki bezpieczeństwa
-        if self.clutch_pressed or self.current_powershift == 0 or self.current_speed == 0.0:
+        if self.clutch_pressed or self.current_gear == 0 or self.current_speed == 0.0:
             return
         
         # Cooldown po ostatniej zmianie
-        time_since_last_shift = (self.get_clock().now() - self.last_shift_time).nanoseconds / 1e9
+        time_since_last_shift = (self.get_clock().now() - self.last_shift_time)
         if time_since_last_shift < self.shift_cooldown:
             return
         
-        current_gear_index = self.current_powershift - 1
+        current_gear_index = self.current_gear - 1
         
         # --- LOGIKA ZMIANY BIEGU W GÓRĘ ---
-        if self.current_powershift < self.max_powershift:
+        if self.current_gear < 4:
             upshift_speed_trigger = self.upshift_speeds[current_gear_index]
             
             if self.current_speed > upshift_speed_trigger:
                 current_kmh = self.current_speed * 3.6
                 trigger_kmh = upshift_speed_trigger * 3.6
-                self.get_logger().info(f"UPSHIFT: {current_kmh:.1f} km/h > {trigger_kmh:.1f} km/h (bieg {self.current_powershift})")
-                self.get_logger().info(f"DEBUG: Przed upshift - current_powershift={self.current_powershift}")
+                self.get_logger().info(f"UPSHIFT: {current_kmh:.1f} km/h > {trigger_kmh:.1f} km/h (bieg {self.current_gear})")
+                self.get_logger().info(f"DEBUG: Przed upshift - current_gear={self.current_gear}")
                 if self.call_shift_service(self.shift_up_client, "GÓRA"):
-                    # Sukces - czekaj na aktualizację z /gears
                     return
                 else:
-                    # Niepowodzenie - nie próbuj ponownie przez cooldown
                     self.last_shift_time = self.get_clock().now()
                     return
         
         # --- LOGIKA ZMIANY BIEGU W DÓŁ ---
-        if self.current_powershift > 1:
+        if self.current_gear > 1:
             downshift_speed_trigger = self.downshift_speeds[current_gear_index]
-            
-            # DEBUG: Loguj szczegóły dla biegu 4
-            if self.current_powershift == 4:
-                current_kmh = self.current_speed * 3.6
-                trigger_kmh = downshift_speed_trigger * 3.6
-                self.get_logger().info(f"DEBUG BIEG 4: prędkość={current_kmh:.1f} km/h, próg downshift={trigger_kmh:.1f} km/h, warunek={current_kmh < trigger_kmh}")
-            
+                        
             if self.current_speed < downshift_speed_trigger:
                 current_kmh = self.current_speed * 3.6
                 trigger_kmh = downshift_speed_trigger * 3.6
-                self.get_logger().info(f"DOWNSHIFT: {current_kmh:.1f} km/h < {trigger_kmh:.1f} km/h (bieg {self.current_powershift - 1})")
-                self.get_logger().info(f"DEBUG: Przed downshift - current_powershift={self.current_powershift}")
+                self.get_logger().info(f"DOWNSHIFT: {current_kmh:.1f} km/h < {trigger_kmh:.1f} km/h (bieg {self.current_gear - 1})")
+                self.get_logger().info(f"DEBUG: Przed downshift - current_gear={self.current_gear}")
                 if self.call_shift_service(self.shift_down_client, "DÓŁ"):
-                    # Sukces - czekaj na aktualizację z /gears
                     return
                 else:
-                    # Niepowodzenie - nie próbuj ponownie przez cooldown
                     self.last_shift_time = self.get_clock().now()
                     return
 
@@ -291,10 +268,10 @@ class GearManagerNode(Node):
                 'decision_timer_status': decision_timer_status,
                 'health_timer_status': health_timer_status,
                 'health_pub_status': health_pub_status,
-                'current_powershift': self.current_powershift,
+                'current_gear': self.current_gear,
                 'current_speed_kmh': self.current_speed * 3.6,
                 'clutch_pressed': self.clutch_pressed,
-                'powershift_initialized': self.powershift_initialized,
+                'gear_initialized': self.gear_initialized,
                 'is_enabled': self.is_enabled,
                 'data_freshness': {
                     'gear_data_age_sec': gear_data_age,
@@ -308,7 +285,7 @@ class GearManagerNode(Node):
                 'gear_thresholds': {
                     'upshift_speeds_kmh': [speed * 3.6 for speed in self.upshift_speeds],
                     'downshift_speeds_kmh': [speed * 3.6 for speed in self.downshift_speeds],
-                    'max_powershift': self.max_powershift
+                    'max_gear': self.max_gear
                 },
                 'errors': errors,
                 'warnings': warnings

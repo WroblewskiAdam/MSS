@@ -17,8 +17,7 @@ class GpsRtkNode(Node):
     def __init__(self):
         super().__init__('gps_rtk_node')
 
-        # Deklaracja i pobieranie parametrów (bez zmian)
-        # self.declare_parameter('serial_port', '/dev/ttyUSB0')
+ 
         self.declare_parameter('serial_port', '/dev/ttyAMA0')        
         self.declare_parameter('baud_rate', 460800)
         self.declare_parameter('ntrip_ip', 'system.asgeupos.pl')
@@ -48,12 +47,10 @@ class GpsRtkNode(Node):
         )
         self.publisher_ = self.create_publisher(GpsRtk, '/gps_rtk_data/tractor', qos_profile)
 
-        # === NOWY PUBLISHER: Health reporting ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/gps_rtk_node', qos_profile)
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
-        # Zaktualizowana struktura do przechowywania danych
+        # struktura do przechowywania danych
         self.latest_gps_data = {
             'gps_utc_time_str': None,
             'rtk_status': 0,
@@ -63,8 +60,8 @@ class GpsRtkNode(Node):
             'speed_mps': 0.0,
             'heading_deg': 0.0,
             'timestamp_gngga': 0.0,
-            'timestamp_agric': 0.0,  # Czas ostatniej wiadomości AGRIC (tylko dla kursu)
-            'timestamp_gnvtg': 0.0   # NOWOŚĆ: Czas ostatniej wiadomości GNVTG (dla prędkości)
+            'timestamp_agric': 0.0, 
+            'timestamp_gnvtg': 0.0 
         }
         self.data_lock = threading.Lock()
 
@@ -156,7 +153,7 @@ class GpsRtkNode(Node):
     def _rtk_reader_thread_func(self):
         """
         Główny wątek odczytujący dane z portu szeregowego.
-        Parsuje wiadomości GNGGA (dla NTRIP i podstawowej pozycji) oraz AGRIC (dla precyzyjnego kursu i prędkości).
+        Parsuje wiadomości GNGGA oraz AGRIC
         """
         self.get_logger().info("Wątek czytnika RTK uruchomiony.")
         while not self.stop_threads_event.is_set() and rclpy.ok():
@@ -200,9 +197,7 @@ class GpsRtkNode(Node):
                                     self.get_logger().warn(f"Pominięto uszkodzoną linię GNVTG: {decoded_line}")
                                     continue
                                 
-                                parts = decoded_line.split(',')
-                                # print(parts)  # Odkomentuj dla debugowania
-                                
+                                parts = decoded_line.split(',')                                
                                 # GNVTG format: $GNVTG,track_deg,T,mag_deg,M,speed_knots,N,speed_kmh,K,mode*checksum
                                 # Indeksy: 0=header, 1=track, 2=T, 3=mag, 4=M, 5=speed_knots, 6=N, 7=speed_kmh, 8=K, 9=mode
                                 
@@ -340,11 +335,6 @@ class GpsRtkNode(Node):
                 time.sleep(1)
         self.get_logger().info("Wątek czytnika RTK zakończony.")
     
-    # Pozostałe funkcje (_initialize_serial, _initialize_ntrip, _ntrip_reader_thread_func,
-    # _nmea_to_decimal_degrees, _convert_gps_utc_to_ros_time, destroy_node)
-    # pozostają BEZ ZMIAN. Skopiuj je z oryginalnego pliku.
-    
-    # Poniżej znajduje się tylko zmodyfikowana funkcja _publish_gps_data_callback
     
     def _publish_gps_data_callback(self):
         msg = GpsRtk()
@@ -376,7 +366,6 @@ class GpsRtkNode(Node):
                  self.get_logger().debug(f"Czekam na świeże dane: GNGGA_age={time_since_gngga:.2f}s, AGRIC_age={time_since_agric:.2f}s, GNVTG_age={time_since_gnvtg:.2f}s")
 
 
-    # ... (reszta funkcji bez zmian - skopiuj je z oryginału) ...
     def _initialize_serial(self):
         self.get_logger().info(f"Otwieranie portu szeregowego {self.serial_port} z prędkością {self.baud_rate}...")
         try:
@@ -386,7 +375,7 @@ class GpsRtkNode(Node):
             self.get_logger().info("Oczekiwanie na pierwszą poprawną wiadomość GNGGA z modułu RTK...")
             start_time = time.time()
             initial_gngga_found = False
-            while time.time() - start_time < 30: # Czekaj max 30 sekund
+            while time.time() - start_time < 30:
                 if self.stop_threads_event.is_set(): return False
                 line_bytes = self.rtk_serial.readline()
                 if line_bytes:
@@ -413,7 +402,7 @@ class GpsRtkNode(Node):
             return False
 
         self.ntrip_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ntrip_socket.settimeout(15.0) # Timeout dla operacji na gnieździe
+        self.ntrip_socket.settimeout(15.0) 
         try:
             self.get_logger().info(f"Łączenie z serwerem NTRIP {self.ntrip_ip}:{self.ntrip_port}...")
             self.ntrip_socket.connect((self.ntrip_ip, self.ntrip_port))
@@ -428,7 +417,7 @@ class GpsRtkNode(Node):
             )
             self.get_logger().info("Wysyłanie żądania autoryzacji NTRIP...")
             self.ntrip_socket.sendall(http_request.encode())
-            response = self.ntrip_socket.recv(2048) # Zwiększony bufor
+            response = self.ntrip_socket.recv(2048)
             response_str = response.decode('ascii', errors='ignore')
             self.get_logger().info(f"Odpowiedź serwera NTRIP: {response_str.strip()}")
 
@@ -459,32 +448,30 @@ class GpsRtkNode(Node):
                 if not self.ntrip_socket:
                     self.get_logger().warn("Gniazdo NTRIP nie jest aktywne. Oczekiwanie na re-inicjalizację.")
                     time.sleep(5) # Poczekaj na główny wątek lub wątek RTK, aby spróbować ponownie połączyć
-                    if not self.ntrip_socket: # Jeśli nadal nie ma gniazda po przerwie
-                         if not self._initialize_ntrip(): # Spróbuj zainicjować ręcznie
+                    if not self.ntrip_socket:
+                         if not self._initialize_ntrip():
                               self.get_logger().warn("Ponowna inicjalizacja NTRIP w wątku NTRIP nie powiodła się.")
-                              time.sleep(5) # Dłuższa przerwa
+                              time.sleep(5) 
                               continue
                 
                 data = self.ntrip_socket.recv(4096)
                 if data:
                     if self.rtk_serial and self.rtk_serial.is_open:
                         self.rtk_serial.write(data)
-                        # self.get_logger().debug(f"NTRIP_RECV: Otrzymano {len(data)} bajtów korekty.")
                     else:
                         self.get_logger().warn("Otrzymano dane NTRIP, ale port szeregowy RTK nie jest otwarty.")
                 else:
                     self.get_logger().warn("Połączenie NTRIP zamknięte przez serwer (recv zwrócił 0). Próba ponownego połączenia.")
                     self.ntrip_socket.close()
                     self.ntrip_socket = None
-                    # Próba ponownego połączenia zostanie podjęta przez logikę w tym wątku lub _rtk_reader_thread_func
-                    time.sleep(5) # Czekaj przed próbą
+                    time.sleep(5) 
             except socket.timeout:
                 self.get_logger().debug("Timeout podczas odbierania danych NTRIP. Kontynuuję...")
                 continue
             except socket.error as e:
                 self.get_logger().error(f"Błąd gniazda w wątku NTRIP: {e}")
                 if self.ntrip_socket: self.ntrip_socket.close()
-                self.ntrip_socket = None # Wymuś re-inicjalizację
+                self.ntrip_socket = None 
                 time.sleep(5)
             except serial.SerialException as e:
                  self.get_logger().error(f"Błąd portu szeregowego przy zapisie danych NTRIP: {e}")

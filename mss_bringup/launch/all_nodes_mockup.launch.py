@@ -27,7 +27,6 @@ def generate_launch_description():
         ),
         
         # === Węzły sensorów i komunikacji (bez prawdziwych sensorów) ===
-        # UWAGA: gps_rtk_node i bt_receiver_node są wyłączone - używamy mockup
         
         # Node(
         #     package='gps_rtk_reader',
